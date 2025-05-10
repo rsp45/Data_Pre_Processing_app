@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ensemble ML Application</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .step { @apply w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-medium; }
+        .step.active { @apply bg-purple-600 text-white border-purple-600; }
+        .step:not(.active) { @apply border-gray-300 text-gray-500; }
+        .section:not(.active) { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">Ensemble ML Application</h1>
+
+        <!-- Progress Steps -->
+        <div class="flex justify-center items-center space-x-4 mb-8">
+            <div class="step active" data-step="1">1</div>
+            <div class="h-px w-8 bg-gray-300"></div>
+            <div class="step" data-step="2">2</div>
+            <div class="h-px w-8 bg-gray-300"></div>
+            <div class="step" data-step="3">3</div>
+            <div class="h-px w-8 bg-gray-300"></div>
+            <div class="step" data-step="4">4</div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex justify-between mb-8">
+            <button id="prevStep" class="hidden px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                <i class="mdi mdi-arrow-left mr-2"></i>Previous Step
+            </button>
+            <button id="nextStep" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                Next Step<i class="mdi mdi-arrow-right ml-2"></i>
+            </button>
+        </div>
+
+        <!-- Step 1: Data Upload -->
+        <div class="section active" id="uploadSection">
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Upload Dataset</h2>
+                <div class="border-dashed border-2 border-gray-300 rounded-lg p-8 text-center">
+                    <input type="file" id="fileInput" class="hidden" accept=".csv">
+                    <label for="fileInput" class="cursor-pointer">
+                        <i class="mdi mdi-upload text-4xl text-gray-400 mb-2"></i>
+                        <p>Drag and drop your CSV file here or click to browse</p>
+                    </label>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-4">Or Try Example Datasets</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <button onclick="loadExampleDataset('iris')" class="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                            <h4 class="font-medium">Iris Dataset</h4>
+                            <p class="text-sm text-gray-600">Classification - Flower species prediction</p>
+                        </button>
+                        <button onclick="loadExampleDataset('california')" class="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                            <h4 class="font-medium">California Housing</h4>
+                            <p class="text-sm text-gray-600">Regression - House price prediction</p>
+                        </button>
+                        <button onclick="loadExampleDataset('diabetes')" class="p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                            <h4 class="font-medium">Diabetes Dataset</h4>
+                            <p class="text-sm text-gray-600">Regression - Disease progression</p>
+                        </button>
+                        <button onclick="loadExampleDataset('breast_cancer')" class="p-4 bg-pink-50 rounded-lg hover:bg-pink-100 transition-colors">
+                            <h4 class="font-medium">Breast Cancer</h4>
+                            <p class="text-sm text-gray-600">Classification - Cancer diagnosis</p>
+                        </button>
+                        <button onclick="loadExampleDataset('wine')" class="p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+                            <h4 class="font-medium">Wine Dataset</h4>
+                            <p class="text-sm text-gray-600">Classification - Wine quality</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Data Analysis -->
+        <div class="section" id="analysisSection">
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Initial Data Insights</h2>
+                <div id="dataInsights" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
+                <div id="dataRecommendations" class="space-y-3 mb-6"></div>
+                
+                <h3 class="text-lg font-semibold mb-4">Advanced EDA</h3>
+                <button id="performAdvancedEDA" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mb-4">
+                    Perform Advanced EDA
+                </button>
+                
+                <div id="edaResults" class="mt-8"></div>
+                <div id="postEdaResults" class="mt-8"></div>
+
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold mb-4">Data Preprocessing Configuration</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Target Column</label>
+                            <select id="targetColumn" class="w-full p-2 border rounded"></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Test Size (%)</label>
+                            <input type="range" id="testSize" min="10" max="40" value="20" class="w-full">
+                            <span id="testSizeValue" class="text-sm">20</span>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="handleImbalance" class="mr-2" checked>
+                            <label class="text-sm font-medium">Handle Class Imbalance (if detected)</label>
+                        </div>
+                    </div>
+
+                    <button id="preprocessButton" class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                        Preprocess Data
+                    </button>
+
+                    <!-- Bias Analysis Results -->
+                    <div id="biasResults" class="mt-6"></div>
+
+                    <!-- Preprocessing Results -->
+                    <div id="preprocessingResults" class="mt-8"></div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Model Training -->
+        <div class="section" id="trainingSection">
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Model Training</h2>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2">Model Type</label>
+                    <select id="modelType" class="w-full p-2 border rounded">
+                        <optgroup label="Basic Models">
+                            <option value="rf">Random Forest</option>
+                            <option value="et">Extra Trees</option>
+                            <option value="gb">Gradient Boosting</option>
+                            <option value="ada">AdaBoost</option>
+                            <option value="bag">Bagging</option>
+                        </optgroup>
+                        <optgroup label="Advanced Models">
+                            <option value="xgb">XGBoost</option>
+                            <option value="lgb">LightGBM</option>
+                            <option value="cat">CatBoost</option>
+                        </optgroup>
+                        <optgroup label="Meta-Ensembles">
+                            <option value="vote">Voting Ensemble</option>
+                            <option value="stack">Stacking Ensemble</option>
+                        </optgroup>
+                    </select>
+                    <p id="modelDescription" class="mt-2 text-sm text-gray-600"></p>
+                </div>
+
+                <div class="mb-6">
+                    <div class="flex items-center mb-2">
+                        <input type="checkbox" id="enableHyperparameterTuning" class="mr-2">
+                        <label class="text-sm font-medium">Enable Hyperparameter Tuning</label>
+                    </div>
+                    <div id="hyperparameterOptions" class="hidden pl-6">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">Number of Trials</label>
+                            <input type="number" id="nTrials" value="100" min="10" max="500" class="w-32 p-2 border rounded">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">Cross Validation Folds</label>
+                            <input type="number" id="cvFolds" value="5" min="2" max="10" class="w-32 p-2 border rounded">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">Cross Validation Strategy</label>
+                            <select id="cvStrategy" class="w-full p-2 border rounded">
+                                <option value="kfold">K-Fold</option>
+                                <option value="stratified">Stratified K-Fold</option>
+                                <option value="timeseries">Time Series Split</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="trainButton" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                    Train Model
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: Model Evaluation -->
+        <div class="section" id="evaluationSection">
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Model Evaluation</h2>
+                
+                <!-- Model Results Section -->
+                <div id="modelResults" class="mb-8">
+                    <!-- Results will be dynamically added here -->
+                </div>
+
+                <!-- Model Comparison Section -->
+                <div id="modelComparisonSection" class="hidden">
+                    <h3 class="text-xl font-semibold mb-4">Model Comparison</h3>
+                    
+                    <!-- Model Selection Grid -->
+                    <div class="mb-6">
+                        <p class="text-sm text-gray-600 mb-2">Select models to compare with the current model:</p>
+                        <div id="modelSelectionGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+                        <button id="compareModelsBtn" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                            Compare Selected Models
+                        </button>
+                    </div>
+
+                    <!-- Comparison Results -->
+                    <div id="comparisonResults" class="hidden mt-8">
+                        <!-- Dynamic content will be inserted here by JavaScript -->
+                    </div>
+
+                    <!-- Comparison Table -->
+                    <div id="comparisonTable" class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr></tr>
+                            </thead>
+                            <tbody id="comparisonTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Model Performance Metrics -->
+                <div id="ensembleResults" class="mb-8"></div>
+
+                <div class="flex space-x-4">
+                    <button id="saveModelButton" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        Save Model
+                    </button>
+                    <button id="downloadPlotsButton" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                        Download Plots
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
